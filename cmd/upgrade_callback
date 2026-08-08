@@ -23,10 +23,6 @@ sync_ui_icons() {
 
 sync_ui_icons
 
-if pgrep -x trim_app_center >/dev/null 2>&1; then
-    kill -HUP "$(pgrep -x trim_app_center | head -1)" 2>/dev/null || true
-fi
-
 # 让新守护脚本立即生效。
 if [ -f "$PID_FILE" ]; then
     pid=$(head -n1 "$PID_FILE" 2>/dev/null | tr -d '[:space:]')

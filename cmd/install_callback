@@ -45,9 +45,4 @@ sync_ui_icons() {
 
 sync_ui_icons
 
-# 让应用中心重新读取 ui/config 与图标资源。
-if pgrep -x trim_app_center >/dev/null 2>&1; then
-    kill -HUP "$(pgrep -x trim_app_center | head -1)" 2>/dev/null || true
-fi
-
 exit 0

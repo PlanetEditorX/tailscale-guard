@@ -61,11 +61,7 @@ LAN_IFACE=enp6s18
 CONF
 fi
 
-echo "[5/5] 刷新应用中心"
-# 通知 trim_app_center 重载，让新应用出现在网页应用中心
-if pgrep -x trim_app_center >/dev/null 2>&1; then
-  kill -HUP "$(pgrep -x trim_app_center | head -1)" 2>/dev/null && echo "已通知 trim_app_center 重载"
-fi
+echo "[5/5] 完成"
 
 echo
 echo "安装完成。请刷新飞牛网页应用中心，应出现「Tailscale 看门狗」。"
