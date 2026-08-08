@@ -532,6 +532,7 @@ function setupChartTooltip(){
 }
 
 // ===== 初始化与定时刷新 =====
+gj('api/sync');               // 打开页面：刷新 token + 校正应用中心状态
 loadState();loadConfig();fetchLog(true);loadHistory();
 setupChartTooltip();
 if(window.ResizeObserver){new ResizeObserver(()=>{if(chartData)drawChart(chartData);}).observe(document.getElementById('chartShell'));}

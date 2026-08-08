@@ -129,6 +129,42 @@ case "$REL_PATH" in
     exit 0
     ;;
 
+# 状态同步：打开页面时调用，用页面 cookie 的 token 校正应用中心状态。
+# 应用中心状态与真实进程可能不一致（如 guard 无 token 时回退直接启停进程），
+# 这里以进程状态为准，通过应用中心 API 校正，并刷新持久化 token。
+/api/sync)
+    token=$(echo "${HTTP_COOKIE:-}" | tr ';' '\n' | sed -n 's/^ *fnos-token=//p')
+    if [ -n "$token" ]; then
+        printf '%s' "$token" > "${PKG_VAR}/.fnos_token"   # 刷新持久化 token
+    else
+        token=$(cat "${PKG_VAR}/.fnos_token" 2>/dev/null)
+    fi
+    if [ -z "$token" ]; then
+        json_ok '{"synced":false,"reason":"no-token"}'
+    fi
+    app_status=$(curl -s -m 10 -H "authorization: trim $token" \
+        "http://127.0.0.1:5666/app-center/v1/app/detail?appName=tailscale" 2>/dev/null \
+        | sed -n 's/.*"status":"\([^"]*\)".*/\1/p' | head -1)
+    if TRIM_PKGVAR=/vol1/@appdata/tailscale TRIM_APPDEST=/vol1/@appcenter/tailscale \
+        bash /var/apps/tailscale/cmd/main status >/dev/null 2>&1; then
+        proc_status="running"
+    else
+        proc_status="stopped"
+    fi
+    if [ "$app_status" = "running" ] && [ "$proc_status" = "stopped" ]; then
+        curl -s -m 30 -X POST -H "authorization: trim $token" -H 'Content-Type: application/json' \
+            -d '{"appName":"tailscale","ignoreDependencies":true,"language":"zh-CN"}' \
+            "http://127.0.0.1:5666/app-center/v1/stop/start" >/dev/null 2>&1
+        action_log "状态校正：应用中心显示运行但进程未运行，执行停止"
+    elif [ "$app_status" = "stopped" ] && [ "$proc_status" = "running" ]; then
+        curl -s -m 30 -X POST -H "authorization: trim $token" -H 'Content-Type: application/json' \
+            -d '{"appName":"tailscale","ignoreDependencies":true,"language":"zh-CN"}' \
+            "http://127.0.0.1:5666/app-center/v1/start/start" >/dev/null 2>&1
+        action_log "状态校正：应用中心显示未运行但进程在运行，执行启动"
+    fi
+    json_ok "{\"synced\":true,\"app\":\"${app_status:-unknown}\",\"process\":\"$proc_status\"}"
+    ;;
+
 # 启停动作
 /api/action)
     [ "$REQUEST_METHOD" = "POST" ] || err "method not allowed"
