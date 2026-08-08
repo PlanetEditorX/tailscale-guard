@@ -1,9 +1,36 @@
 #!/bin/bash
-# 升级后回调：重启守护进程，让新版本代码生效
-PID_FILE="/vol1/@appdata/tailscale-guard/guard.pid"
+# 升级后回调：同步新 UI/图标并重启守护进程。
+APP="tailscale-guard"
+APP_DEST="/vol1/@appcenter/${APP}"
+APP_REG="/var/apps/${APP}"
+PID_FILE="/vol1/@appdata/${APP}/guard.pid"
+
+sync_ui_icons() {
+    [ -d "${APP_DEST}/ui" ] || return 0
+    mkdir -p "${APP_REG}/ui/images"
+
+    # 覆盖 UI 配置，使桌面入口改用 images/guard_{0}.png。
+    cp -rf "${APP_DEST}/ui/." "${APP_REG}/ui/" 2>/dev/null || true
+
+    # 新文件名用于绕过旧图标缓存；旧文件名/root ICON 同步作为兼容兜底。
+    cp -f "${APP_DEST}/ui/images/guard_64.png"  "${APP_REG}/ui/images/guard_64.png" 2>/dev/null || true
+    cp -f "${APP_DEST}/ui/images/guard_256.png" "${APP_REG}/ui/images/guard_256.png" 2>/dev/null || true
+    cp -f "${APP_DEST}/ui/images/guard_64.png"  "${APP_REG}/ui/images/icon_64.png" 2>/dev/null || true
+    cp -f "${APP_DEST}/ui/images/guard_256.png" "${APP_REG}/ui/images/icon_256.png" 2>/dev/null || true
+    cp -f "${APP_DEST}/ui/images/guard_64.png"  "${APP_REG}/ICON.PNG" 2>/dev/null || true
+    cp -f "${APP_DEST}/ui/images/guard_256.png" "${APP_REG}/ICON_256.PNG" 2>/dev/null || true
+}
+
+sync_ui_icons
+
+if pgrep -x trim_app_center >/dev/null 2>&1; then
+    kill -HUP "$(pgrep -x trim_app_center | head -1)" 2>/dev/null || true
+fi
+
+# 让新守护脚本立即生效。
 if [ -f "$PID_FILE" ]; then
     pid=$(head -n1 "$PID_FILE" 2>/dev/null | tr -d '[:space:]')
-    [ -n "$pid" ] && kill -TERM "$pid" 2>/dev/null
+    [ -n "$pid" ] && kill -TERM "$pid" 2>/dev/null || true
     sleep 2
 fi
 exit 0

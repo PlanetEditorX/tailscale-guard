@@ -2,7 +2,7 @@
     ".url": {
         "tailscale-guard.Application": {
             "title": "Tailscale 看门狗",
-            "icon": "images/icon_{0}.png",
+            "icon": "images/guard_{0}.png",
             "type": "iframe",
             "protocol": "http",
             "url": "/cgi/ThirdParty/tailscale-guard/index.cgi/",

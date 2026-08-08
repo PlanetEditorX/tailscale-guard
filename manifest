@@ -9,4 +9,4 @@ maintainer_url        = https://tailscale.com/
 distributor           = custom
 desktop_uidir         = ui
 desktop_applaunchname = tailscale-guard.Application
-changelog             = v1.0.8 自动构建（2026-08-08）
+changelog             = 内部版本 1.0.8：保留 Tailscale 官方图标主体，增加右下角守护盾牌标识；修复桌面/应用入口/网页图标同步与缓存问题（2026-08-08）

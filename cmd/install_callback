@@ -1,15 +1,16 @@
 #!/bin/bash
-# 安装后回调：根据安装向导收集的参数生成 guard.conf
-# 运行环境由 fnOS 注入 wizard_* 变量（来自 wizard/install 的定义）
+# 安装后回调：生成 guard.conf，并同步 fnOS 桌面/应用入口所需 UI 图标。
 PKG_VAR="/vol1/@appdata/tailscale-guard"
+APP_DEST="/vol1/@appcenter/tailscale-guard"
+APP_REG="/var/apps/tailscale-guard"
 mkdir -p "${PKG_VAR}"
 
-# 向导字段兜底默认值（向导未提交时也能生成可用配置）
+# 向导字段兜底默认值
 [ -z "$wizard_sentinel" ]        && wizard_sentinel="192.168.1.30"
 [ -z "$wizard_start_condition" ] && wizard_start_condition="all_offline"
 [ -z "$wizard_stop_condition" ]  && wizard_stop_condition="any_online"
 
-# 生成初始配置文件
+# 生成初始配置文件；统计默认保留 30 天。
 cat > "${PKG_VAR}/guard.conf" <<CONF
 SENTINELS=${wizard_sentinel}
 NORMAL_INTERVAL=600
@@ -19,16 +20,34 @@ START_CONDITION=${wizard_start_condition}
 STOP_THRESHOLD=1
 STOP_CONDITION=${wizard_stop_condition}
 EFFECTIVE_TIME=${wizard_effective_time}
+HISTORY_KEEP=2592000
 LAN_IFACE=enp6s18
 CONF
 
-# 同步 UI 资源（图标/入口配置）到 /var/apps 注册目录，
-# 覆盖部分 fnOS 版本从该路径读取桌面图标的场景
-APP_DEST="/vol1/@appcenter/tailscale-guard"
-APP_REG="/var/apps/tailscale-guard"
-if [ -d "${APP_DEST}/ui" ]; then
-    mkdir -p "${APP_REG}/ui"
-    cp -r "${APP_DEST}/ui/." "${APP_REG}/ui/" 2>/dev/null || true
+sync_ui_icons() {
+    [ -d "${APP_DEST}/ui" ] || return 0
+    mkdir -p "${APP_REG}/ui/images"
+
+    # /vol1/@appcenter 是应用主体；/var/apps 是 fnOS 桌面/应用中心的注册目录。
+    # 两处都显式同步，避免升级后桌面仍显示缓存中的旧 Tailscale 图标。
+    cp -rf "${APP_DEST}/ui/." "${APP_REG}/ui/" 2>/dev/null || true
+
+    # 新文件名 guard_{0}.png 用于主动绕过旧 icon_{0}.png 的 URL 缓存。
+    cp -f "${APP_DEST}/ui/images/guard_64.png"  "${APP_REG}/ui/images/guard_64.png" 2>/dev/null || true
+    cp -f "${APP_DEST}/ui/images/guard_256.png" "${APP_REG}/ui/images/guard_256.png" 2>/dev/null || true
+
+    # 同时保留传统文件名，兼容不同 fnOS 版本/入口读取逻辑。
+    cp -f "${APP_DEST}/ui/images/guard_64.png"  "${APP_REG}/ui/images/icon_64.png" 2>/dev/null || true
+    cp -f "${APP_DEST}/ui/images/guard_256.png" "${APP_REG}/ui/images/icon_256.png" 2>/dev/null || true
+    cp -f "${APP_DEST}/ui/images/guard_64.png"  "${APP_REG}/ICON.PNG" 2>/dev/null || true
+    cp -f "${APP_DEST}/ui/images/guard_256.png" "${APP_REG}/ICON_256.PNG" 2>/dev/null || true
+}
+
+sync_ui_icons
+
+# 让应用中心重新读取 ui/config 与图标资源。
+if pgrep -x trim_app_center >/dev/null 2>&1; then
+    kill -HUP "$(pgrep -x trim_app_center | head -1)" 2>/dev/null || true
 fi
 
 exit 0

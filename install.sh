@@ -17,7 +17,7 @@ command -v tailscaled >/dev/null 2>&1 || [ -f /var/apps/tailscale/cmd/main ] || 
   echo "未检测到 Tailscale 应用，请先在飞牛应用中心安装 Tailscale"; exit 1; }
 
 echo "[1/5] 创建目录与符号链接"
-mkdir -p $DA/cmd $DA/config $DA/ui $AC/app $AC/ui/images $AC/www $AD
+mkdir -p $DA/cmd $DA/config $DA/ui/images $AC/app $AC/ui/images $AC/www $AD
 # 让 /var/apps 下的注册目录能解析到数据/目标目录
 ln -sfn $AD $DA/var
 ln -sfn $AD $DA/etc
@@ -32,6 +32,13 @@ cp ./ICON_256.PNG $DA/ICON_256.PNG 2>/dev/null
 cp -r ./app/* $AC/app/
 cp -r ./ui/* $AC/ui/
 cp -r ./ui/* $DA/ui/ 2>/dev/null || true
+# 显式同步新旧文件名与根图标，兼容不同 fnOS 入口并绕过旧图标缓存。
+cp -f ./ui/images/guard_64.png  $DA/ui/images/guard_64.png 2>/dev/null || true
+cp -f ./ui/images/guard_256.png $DA/ui/images/guard_256.png 2>/dev/null || true
+cp -f ./ui/images/guard_64.png  $DA/ui/images/icon_64.png 2>/dev/null || true
+cp -f ./ui/images/guard_256.png $DA/ui/images/icon_256.png 2>/dev/null || true
+cp -f ./ui/images/guard_64.png  $DA/ICON.PNG 2>/dev/null || true
+cp -f ./ui/images/guard_256.png $DA/ICON_256.PNG 2>/dev/null || true
 cp -r ./www/* $AC/www/
 
 echo "[3/5] 设置权限"
@@ -49,6 +56,7 @@ START_CONDITION=all_offline
 STOP_THRESHOLD=1
 STOP_CONDITION=any_online
 EFFECTIVE_TIME=
+HISTORY_KEEP=2592000
 LAN_IFACE=enp6s18
 CONF
 fi

@@ -56,7 +56,7 @@ load_conf() {
     STOP_THRESHOLD=1              # 停止 Tailscale 所需连续在线次数
     STOP_CONDITION="any_online"   # 停止条件
     EFFECTIVE_TIME=""             # 生效时段 "HHMM-HHMM"，留空=全天
-    HISTORY_KEEP=86400            # 在线统计保留时长（秒），默认24小时
+    HISTORY_KEEP=2592000          # 在线统计保留时长（秒），默认1个月
     LAN_IFACE="enp6s18"           # 局域网网卡（ARP 探测用）
     SUBNET="192.168.1.0/24"       # 局域网网段（广播 ping 用）
     [ -f "${CONF}" ] && source "${CONF}" 2>/dev/null
@@ -215,7 +215,7 @@ JSON
 write_history() {
     local ts=0 cutoff keep
     ts_running && ts=1
-    keep=${HISTORY_KEEP:-86400}
+    keep=${HISTORY_KEEP:-2592000}
     cutoff=$(( $(date +%s) - keep ))
     { awk -F, -v c="$cutoff" '$1>=c' "${HISTORY}" 2>/dev/null; printf '%s,%s,%s,%s\n' "$(date +%s)" "${online_count:-0}" "${total_count:-0}" "$ts"; } \
         > "${HISTORY}.tmp" && mv "${HISTORY}.tmp" "${HISTORY}"
