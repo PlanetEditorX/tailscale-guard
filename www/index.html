@@ -13,6 +13,17 @@ h1{font-size:20px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
 .dot.off{background:var(--red)}
 .dot.warn{background:var(--amber)}
+/* 状态图标：内联 SVG，颜色随 on/off 状态切换 */
+.icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:inline-block;vertical-align:-3px}
+.icon.on{color:var(--green)}   /* 在线：绿 */
+.icon.off{color:var(--red)}    /* 离线：红 */
+.icon.unk{color:var(--muted)}  /* 未知：灰 */
+.icon-wrap{display:inline-flex;align-items:center;gap:6px;margin-left:6px}
+.sent-name{display:flex;align-items:center;gap:8px}
+/* 提高特异性，避免被 .stat span:first-child 的灰色覆盖 */
+.icon-wrap .icon.on{color:var(--green)}
+.icon-wrap .icon.off{color:var(--red)}
+.icon-wrap .icon.unk{color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
 .card h2{font-size:15px;color:var(--muted);margin-bottom:12px;font-weight:600}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
@@ -55,7 +66,7 @@ button:disabled{opacity:.5;cursor:default}
   <h2>运行状态</h2>
   <div class="grid">
     <div class="stat"><span>守护进程</span><span id="sPhase" class="badge gray">读取中</span></div>
-    <div class="stat"><span>Tailscale</span><span id="sTs" class="badge gray">未知</span></div>
+    <div class="stat"><span>Tailscale <span class="icon-wrap"><span id="tsIcon" class="icon unk"><svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5.2-3.4 8.8-8 11-4.6-2.2-8-5.8-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg></span></span></span><span id="sTs" class="badge gray">未知</span></div>
     <div class="stat"><span>哨兵整体</span><span id="sSentinel" class="badge gray">-</span></div>
     <div class="stat"><span>生效时段</span><span id="sEff" class="badge gray">-</span></div>
     <div class="stat"><span>启动命中</span><span id="sStartHits">-</span></div>
@@ -153,16 +164,25 @@ async function loadState(){
   set('sPhase',tn,bc);
   const tsOn=s.tailscale==='running';
   set('sTs',tsOn?'运行中':'已停止',tsOn?'green':'red');
+  // Tailscale 状态图标：运行=绿(盾+对号)，停止=红(盾+叉)，未知=灰
+  const tsIcon=document.getElementById('tsIcon');
+  tsIcon.className='icon '+(tsOn?'on':s.tailscale==='stopped'?'off':'unk');
+  tsIcon.innerHTML=s.tailscale==='running'
+    ?'<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5.2-3.4 8.8-8 11-4.6-2.2-8-5.8-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg>'
+    :'<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5.2-3.4 8.8-8 11-4.6-2.2-8-5.8-8-11V5z"/><path d="M10 10l4 4m0-4l-4 4"/></svg>';
   set('sSentinel',s.any_online===1?'有设备在线':'全部离线',s.any_online===1?'green':'red');
   set('sEff',s.effective==='yes'?'生效中':'生效时段外',s.effective==='yes'?'green':'amber');
   document.getElementById('sStartHits').textContent=(s.start_hits??0);
   document.getElementById('sStopHits').textContent=(s.stop_hits??0);
   document.getElementById('sAction').textContent=s.last_action||'无';
   document.getElementById('sProvbe').textContent=s.last_probe||'-';
-  // 哨兵设备列表
+  // 哨兵设备列表：每台设备前带手机图标（在线=绿，离线=红）
   const list=document.getElementById('sList');
   if(s.sentinels&&s.sentinels.length){
-    list.innerHTML=s.sentinels.map(x=>`<tr><td>${x.device}</td><td><span class="badge ${x.status==='online'?'green':'red'}">${x.status==='online'?'在线':'离线'}</span></td></tr>`).join('');
+    list.innerHTML=s.sentinels.map(x=>{
+      const on=x.status==='online';
+      return `<tr><td><span class="sent-name"><span class="icon ${on?'on':'off'}"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></span>${x.device}</span></td><td><span class="badge ${on?'green':'red'}">${on?'在线':'离线'}</span></td></tr>`;
+    }).join('');
   }else{list.innerHTML='<tr><td colspan="2" class="muted">未配置哨兵</td></tr>';}
 }
 

@@ -1,0 +1,16 @@
+[      61ms] TypeError: Cannot set properties of null (setting 'value')
+    at file:///root/tailscale-guard/www/index.html:199:148
+    at Array.forEach (<anonymous>)
+    at loadConfig (file:///root/tailscale-guard/www/index.html:199:104)
+[    5982ms] TypeError: Cannot set properties of null (setting 'value')
+    at file:///root/tailscale-guard/www/index.html:199:148
+    at Array.forEach (<anonymous>)
+    at loadConfig (file:///root/tailscale-guard/www/index.html:199:104)
+[   54347ms] TypeError: Cannot set properties of null (setting 'value')
+    at file:///root/tailscale-guard/www/index.html:202:148
+    at Array.forEach (<anonymous>)
+    at loadConfig (file:///root/tailscale-guard/www/index.html:202:104)
+[   60467ms] TypeError: Cannot set properties of null (setting 'value')
+    at file:///root/tailscale-guard/www/index.html:202:148
+    at Array.forEach (<anonymous>)
+    at loadConfig (file:///root/tailscale-guard/www/index.html:202:104)
