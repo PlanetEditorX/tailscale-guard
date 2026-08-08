@@ -260,7 +260,8 @@ while true; do
     # 状态机转换
     case "$phase" in
         idle)
-            # 空闲态：满足启动条件则计数，达阈值立即启动，否则进入快速复测
+            # 空闲态：满足启动条件则计数，达阈值立即启动，否则进入快速复测；
+            # Tailscale 已在运行（外部/手动启动）且满足停止条件时，直接停止
             if cond_met "$START_CONDITION"; then
                 start_hits=1
                 if [ $start_hits -ge "$START_THRESHOLD" ]; then
@@ -273,6 +274,11 @@ while true; do
                     phase="retry"
                     write_state "retry" "none"
                 fi
+            elif ts_running && cond_met "$STOP_CONDITION"; then
+                # 哨兵在线但 Tailscale 仍在运行（非本守护启动的）→ 停止并记录
+                ts_stop
+                start_hits=0; stop_hits=0
+                write_state "idle" "stop"
             else
                 start_hits=0
                 write_state "idle" "none"

@@ -295,17 +295,17 @@ async function act(a){const r=await pj('api/action','action='+a);if(!r.ok)alert(
 // ===== 在线统计趋势图 =====
 // 数据来自 /api/history（时间戳,在线数,总数,Tailscale状态），按所选周期聚合后显示
 const RANGE_PRESETS={
-  86400:{label:'最近24小时',bucket:1800},
-  604800:{label:'最近7天',bucket:7200},
-  2592000:{label:'最近30天',bucket:21600},
-  15552000:{label:'最近6个月',bucket:172800},
-  31536000:{label:'最近1年',bucket:604800}
+  86400:{label:'最近24小时'},
+  604800:{label:'最近7天'},
+  2592000:{label:'最近30天'},
+  15552000:{label:'最近6个月'},
+  31536000:{label:'最近1年'}
 };
-let chartRange=604800;   // 默认显示最近 7 天，更适合看趋势
+let chartRange=86400;   // 默认显示最近 24 小时
 let chartData=[];        // 当前绘制数据，供缩放和悬停提示复用
 
 function rangeInfo(){
-  return RANGE_PRESETS[chartRange]||RANGE_PRESETS[604800];
+  return RANGE_PRESETS[chartRange]||RANGE_PRESETS[86400];
 }
 
 // 切换统计周期（由下拉框触发）
@@ -317,8 +317,7 @@ function setRange(secs){
 }
 
 function aggregateHistory(hist,rangeSecs){
-  const cfg=RANGE_PRESETS[rangeSecs]||RANGE_PRESETS[604800];
-  const bucket=cfg.bucket;
+  const cfg=RANGE_PRESETS[rangeSecs]||RANGE_PRESETS[86400];
   if(!hist.length)return[];
   // 时间轴终点以数据自身最新时间戳为准（NAS 时钟），
   // 避免浏览器与 NAS 时钟不同步导致过滤错乱、切换周期无变化
@@ -326,6 +325,10 @@ function aggregateHistory(hist,rangeSecs){
   const startTs=endTs-rangeSecs;
   const filtered=hist.filter(p=>Number(p.t)>=startTs).sort((a,b)=>a.t-b.t);
   if(!filtered.length)return [];
+  // 自适应桶：按实际数据跨度切分，目标约 150 个点，桶至少 15 秒。
+  // 这样无论探测频率（15秒/600秒）都能保留细节，不会把数据压成一个点。
+  const dataStart=filtered[0].t, dataEnd=filtered[filtered.length-1].t;
+  const bucket=Math.max(15, Math.ceil((dataEnd-dataStart)/150));
   const map=[];
   for(const p of filtered){
     const idx=Math.floor((Number(p.t)-startTs)/bucket);
@@ -339,7 +342,7 @@ function aggregateHistory(hist,rangeSecs){
     if(!cell || !cell.samples.length) continue;
     const last=cell.samples[cell.samples.length-1];
     out.push({
-      t:startTs+i*bucket+bucket/2,
+      t:Number(last.t),           // 用最后一条真实数据的时间戳，保证悬停时间与实际一致
       online:Number(last.online)||0,
       total:Number(last.total)||0,
       ts:!!cell.ts
