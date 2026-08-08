@@ -63,9 +63,35 @@ load_conf() {
 }
 
 # ---- Tailscale 控制 ----
+# 通过 fnOS 应用中心 API 启停（保证应用中心状态同步）：
+#   token 由 Web 页面请求时持久化到 .fnos_token；无有效 token 时回退直接操作进程。
+#   $1 = start|stop
+ts_api() {
+    local action="$1" token resp
+    token=$(cat "${PKG_VAR}/.fnos_token" 2>/dev/null)
+    [ -z "$token" ] && return 1
+    resp=$(curl -s -m 60 -X POST \
+        -H "Content-Type: application/json" \
+        -H "authorization: trim ${token}" \
+        -d '{"appName":"tailscale","ignoreDependencies":true,"language":"zh-CN"}' \
+        "http://127.0.0.1:5666/app-center/v1/${action}/start" 2>/dev/null)
+    echo "$resp" | grep -q '"code":0'
+}
 ts_running() { bash "${TS_MAIN}" status >/dev/null 2>&1; }          # 是否运行中
-ts_start()  { logmsg "动作: 启动 Tailscale"; bash "${TS_MAIN}" start >>"${LOG}" 2>&1; }  # 启动
-ts_stop()   { logmsg "动作: 停止 Tailscale"; bash "${TS_MAIN}" stop >>"${LOG}" 2>&1; }   # 停止
+ts_start()  {
+    logmsg "动作: 启动 Tailscale"
+    if ! ts_api start; then
+        logmsg "应用中心 API 启动失败或无 token，回退直接启动"
+        bash "${TS_MAIN}" start >>"${LOG}" 2>&1
+    fi
+}
+ts_stop()   {
+    logmsg "动作: 停止 Tailscale"
+    if ! ts_api stop; then
+        logmsg "应用中心 API 停止失败或无 token，回退直接停止"
+        bash "${TS_MAIN}" stop >>"${LOG}" 2>&1
+    fi
+}
 
 # ---- 设备探测 ----
 # 按 IP 探测设备是否在线（三道检测，逐级兜底）：
