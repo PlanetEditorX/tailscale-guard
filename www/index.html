@@ -57,6 +57,9 @@ button:disabled{opacity:.5;cursor:default}
 .hint{font-size:11px;color:var(--muted);margin-top:2px}
 .panel{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
 #chart{width:100%;height:160px;display:block;background:#0b1120;border-radius:8px}
+.chart-ranges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.range-btn{background:var(--border);color:var(--txt);font-size:12px;padding:4px 10px;border-radius:6px;border:0;cursor:pointer}
+.range-btn.active{background:var(--acc);color:#0f172a}
 .chart-legend{display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--muted)}
 .chart-legend .dot{margin-right:4px}
 .muted{color:var(--muted)}
@@ -91,11 +94,19 @@ button:disabled{opacity:.5;cursor:default}
 </div>
 
 <div class="card">
-  <div class="sec-title"><h2>历史趋势</h2><button class="btn-ghost" style="font-size:12px;padding:4px 10px" onclick="loadHistory()">刷新</button></div>
+  <div class="sec-title"><h2>在线统计</h2><button class="btn-ghost" style="font-size:12px;padding:4px 10px" onclick="loadHistory()">刷新</button></div>
+  <div class="chart-ranges">
+    <button class="range-btn active" onclick="setRange(86400,this)">24小时</button>
+    <button class="range-btn" onclick="setRange(604800,this)">1周</button>
+    <button class="range-btn" onclick="setRange(2592000,this)">1个月</button>
+    <button class="range-btn" onclick="setRange(15552000,this)">半年</button>
+    <button class="range-btn" onclick="setRange(31536000,this)">1年</button>
+  </div>
   <canvas id="chart"></canvas>
   <div class="chart-legend">
     <span><span class="dot on"></span> 哨兵在线数</span>
     <span><span class="dot" style="background:#38bdf8"></span> Tailscale 运行中</span>
+    <button class="btn-warn" style="font-size:12px;padding:2px 10px;margin-left:auto" onclick="clearHistory()">清除统计</button>
   </div>
 </div>
 
@@ -141,6 +152,14 @@ button:disabled{opacity:.5;cursor:default}
         <input id="EFF_ALLDAY" type="checkbox" checked style="width:auto"> <span>全天生效（忽略上面的时间）</span>
       </label>
     </div>
+    <div><label>统计保留时间</label>
+      <select id="HISTORY_KEEP">
+        <option value="86400">24 小时</option>
+        <option value="604800">1 周</option>
+        <option value="2592000">1 个月</option>
+        <option value="15552000">半年</option>
+        <option value="31536000">1 年</option>
+      </select></div>
     <div><label>LAN 网卡</label><input id="LAN_IFACE" placeholder="enp6s18"></div>
   </div>
   <div class="btns">
@@ -213,7 +232,7 @@ async function loadConfig(){
   // SENTINELS 在 textarea 中用换行分隔；其它字段原样填充
   document.getElementById('SENTINELS').value=(c.SENTINELS||'').split(',').filter(Boolean).join('\n');
   // EFFECTIVE_TIME 无独立输入框（由下方两个 time 选择器表示），跳过
-  ['NORMAL_INTERVAL','RETRY_INTERVAL','START_THRESHOLD','STOP_THRESHOLD','LAN_IFACE'].forEach(k=>{const e=document.getElementById(k);if(e)e.value=c[k]||'';});
+  ['NORMAL_INTERVAL','RETRY_INTERVAL','START_THRESHOLD','STOP_THRESHOLD','LAN_IFACE','HISTORY_KEEP'].forEach(k=>{const e=document.getElementById(k);if(e)e.value=c[k]||'';});
   document.getElementById('START_CONDITION').value=c.START_CONDITION||'all_offline';
   document.getElementById('STOP_CONDITION').value=c.STOP_CONDITION||'any_online';
   // 把 EFFECTIVE_TIME(HHMM-HHMM) 解析到两个 time 选择器；为空则勾选"全天"
@@ -241,6 +260,8 @@ async function saveConfig(){
   ['NORMAL_INTERVAL','RETRY_INTERVAL','START_THRESHOLD','STOP_THRESHOLD','START_CONDITION','STOP_CONDITION','LAN_IFACE']
     .forEach(k=>body.set(k,document.getElementById(k).value.trim()));
   body.set('EFFECTIVE_TIME',effToConfig());
+  const keep=document.getElementById('HISTORY_KEEP').value;
+  body.set('HISTORY_KEEP',keep);
   const r=await pj('api/config',body.toString());
   if(r.ok)alert('已保存，守护进程已重载');else alert('保存失败:'+(r.error||'未知'));
   loadState();
@@ -248,15 +269,38 @@ async function saveConfig(){
 // 手动启停动作（守护进程 / Tailscale）
 async function act(a){const r=await pj('api/action','action='+a);if(!r.ok)alert('操作失败');loadState();setTimeout(loadState,1500);}
 
-// ===== 历史趋势折线图 =====
-// 拉取历史记录并重绘；数据来自 /api/history（时间戳,在线数,总数,Tailscale状态）
+// ===== 在线统计折线图 =====
+// 数据来自 /api/history（时间戳,在线数,总数,Tailscale状态），按所选时间范围显示
+let chartRange=86400;   // 当前统计范围（秒），默认 24 小时
+
+// 切换统计时间范围
+function setRange(secs,btn){
+  chartRange=secs;
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  loadHistory();
+}
+
+// 拉取历史并重绘；超出范围的数据前端过滤，点数过多时降采样
 async function loadHistory(){
   const h=await gj('api/history');
-  const hist=h.history||[];
+  let hist=(h.history||[]).filter(p=>p.t>=Date.now()/1000-chartRange);
   const cv=document.getElementById('chart');
   if(!hist.length){cv.getContext('2d').clearRect(0,0,cv.width,cv.height);return;}
+  if(hist.length>720){   // 降采样：最多画 720 个点
+    const step=Math.ceil(hist.length/720);
+    hist=hist.filter((_,i)=>i%step===0);
+  }
   drawChart(hist);
 }
+
+// 清除在线统计历史
+async function clearHistory(){
+  if(!confirm('确定清除全部在线统计历史数据？'))return;
+  const r=await pj('api/action','action=clear-history');
+  if(r.ok)loadHistory();else alert('清除失败');
+}
+
 function drawChart(hist){
   const cv=document.getElementById('chart');
   const dpr=window.devicePixelRatio||1;
@@ -295,9 +339,10 @@ function drawChart(hist){
 
 // ===== 初始化与定时刷新 =====
 loadState();loadConfig();fetchLog(true);loadHistory();
+act('probe-now');         // 打开页面立即触发一次检测（需守护进程运行中）
 setInterval(loadState,5000);          // 状态每 5 秒刷新
 setInterval(()=>fetchLog(true),10000); // 日志每 10 秒刷新
-setInterval(loadHistory,30000);        // 趋势图每 30 秒刷新
+setInterval(loadHistory,30000);        // 在线统计每 30 秒刷新
 </script>
 </body>
 </html>

@@ -41,7 +41,7 @@ chmod +x $DA/cmd/*_init $DA/cmd/*_callback 2>/dev/null || true
 echo "[4/5] 生成默认配置"
 if [ ! -f $AD/guard.conf ]; then
 cat > $AD/guard.conf <<"CONF"
-SENTINELS=192.168.1.20
+SENTINELS=192.168.1.30
 NORMAL_INTERVAL=600
 RETRY_INTERVAL=180
 START_THRESHOLD=3

@@ -10,7 +10,7 @@
                 "type": "text",
                 "field": "wizard_sentinel",
                 "label": "哨兵设备 IP 或 MAC（多个用逗号分隔）",
-                "initValue": "192.168.1.20",
+                "initValue": "192.168.1.30",
                 "rules": [
                     {
                         "required": true,

@@ -56,6 +56,7 @@ load_conf() {
     STOP_THRESHOLD=1              # 停止 Tailscale 所需连续在线次数
     STOP_CONDITION="any_online"   # 停止条件
     EFFECTIVE_TIME=""             # 生效时段 "HHMM-HHMM"，留空=全天
+    HISTORY_KEEP=86400            # 在线统计保留时长（秒），默认24小时
     LAN_IFACE="enp6s18"           # 局域网网卡（ARP 探测用）
     SUBNET="192.168.1.0/24"       # 局域网网段（广播 ping 用）
     [ -f "${CONF}" ] && source "${CONF}" 2>/dev/null
@@ -184,11 +185,13 @@ JSON
 }
 
 # 追加一条历史记录：时间戳,在线设备数,设备总数,Tailscale状态(1运行/0停止)
-# 只保留最近 720 条（默认 10 分钟间隔 ≈ 5 天）
+# 按 HISTORY_KEEP 保留时长过滤，超期的旧记录自动丢弃
 write_history() {
-    local ts=0
+    local ts=0 cutoff keep
     ts_running && ts=1
-    { tail -n 719 "${HISTORY}" 2>/dev/null; printf '%s,%s,%s,%s\n' "$(date +%s)" "${online_count:-0}" "${total_count:-0}" "$ts"; } \
+    keep=${HISTORY_KEEP:-86400}
+    cutoff=$(( $(date +%s) - keep ))
+    { awk -F, -v c="$cutoff" '$1>=c' "${HISTORY}" 2>/dev/null; printf '%s,%s,%s,%s\n' "$(date +%s)" "${online_count:-0}" "${total_count:-0}" "$ts"; } \
         > "${HISTORY}.tmp" && mv "${HISTORY}.tmp" "${HISTORY}"
 }
 
@@ -205,6 +208,7 @@ sleep_guard() {
 # ---- 信号处理 ----
 trap 'logmsg "guard received TERM, exiting"; exit 0' TERM                    # 停止守护
 trap 'logmsg "guard received USR1, reloading config"; RELOAD_NOW=1' USR1     # 重载配置
+trap 'logmsg "guard received USR2, probing now"; RELOAD_NOW=1' USR2          # 立即检测一次
 
 # ---- 主循环 ----
 logmsg "=== guard started (pid=$$) ==="

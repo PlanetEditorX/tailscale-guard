@@ -30,6 +30,8 @@ esac
 header()  { echo "Content-Type: $1"; echo ""; }               # 输出响应头
 json_ok() { header "application/json; charset=utf-8"; printf '%s' "$1"; exit 0; }  # 返回 JSON 并结束
 err()     { header "application/json; charset=utf-8"; printf '{"error":"%s"}' "$1"; exit 0; }  # 返回错误并结束
+# 手动动作记录（写入 guard.log 供用户追踪）
+action_log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [action] $1" >> "${PKG_VAR}/guard.log"; }
 
 # ---- API 端点 ----
 case "$REL_PATH" in
@@ -65,7 +67,7 @@ case "$REL_PATH" in
             v=$(printf '%s' "$kv" | cut -d= -f2- | sed 's/+/ /g; s/%0D//g; s/%0A/\n/g')
             # 只允许写入白名单字段，防止注入
             case "$k" in
-                SENTINELS|NORMAL_INTERVAL|RETRY_INTERVAL|START_THRESHOLD|START_CONDITION|STOP_THRESHOLD|STOP_CONDITION|EFFECTIVE_TIME|LAN_IFACE)
+                SENTINELS|NORMAL_INTERVAL|RETRY_INTERVAL|START_THRESHOLD|START_CONDITION|STOP_THRESHOLD|STOP_CONDITION|EFFECTIVE_TIME|LAN_IFACE|HISTORY_KEEP)
                     printf '%s=%s\n' "$k" "$v" >> "$tmp"
                     ;;
             esac
@@ -93,11 +95,11 @@ case "$REL_PATH" in
     exit 0
     ;;
 
-# 历史趋势：返回 history.log 最近 N 条，供折线图使用
+# 历史趋势：返回 history.log 全部记录（保留时长由守护进程控制），供折线图使用
 # 每行格式: 时间戳,在线设备数,设备总数,Tailscale状态(1运行/0停止)
 /api/history)
     header "application/json; charset=utf-8"
-    { echo '{"history":['; tail -n 720 "${PKG_VAR}/history.log" 2>/dev/null | awk -F, 'NR>1{printf ","}{printf "{\"t\":%s,\"online\":%s,\"total\":%s,\"ts\":%s}", $1,$2,$3,$4}'; echo ']}'; }
+    { echo '{"history":['; cat "${PKG_VAR}/history.log" 2>/dev/null | awk -F, 'NR>1{printf ","}{printf "{\"t\":%s,\"online\":%s,\"total\":%s,\"ts\":%s}", $1,$2,$3,$4}'; echo ']}'; }
     exit 0
     ;;
 
@@ -108,12 +110,16 @@ case "$REL_PATH" in
     act=$(printf '%s' "$body" | sed -n 's/.*action=\([^&]*\).*/\1/p')
     case "$act" in
         # 控制本应用守护进程
-        start)      bash /var/apps/${APP}/cmd/main start >>"${PKG_VAR}/guard.log" 2>&1 ;;
-        stop)       bash /var/apps/${APP}/cmd/main stop >>"${PKG_VAR}/guard.log" 2>&1 ;;
-        restart)    bash /var/apps/${APP}/cmd/main restart >>"${PKG_VAR}/guard.log" 2>&1 ;;
+        start)      action_log "手动启动守护进程"; bash /var/apps/${APP}/cmd/main start >>"${PKG_VAR}/guard.log" 2>&1 ;;
+        stop)       action_log "手动停止守护进程"; bash /var/apps/${APP}/cmd/main stop >>"${PKG_VAR}/guard.log" 2>&1 ;;
+        restart)    action_log "手动重启守护进程"; bash /var/apps/${APP}/cmd/main restart >>"${PKG_VAR}/guard.log" 2>&1 ;;
         # 直接控制 Tailscale 应用（临时手动启停）
-        ts-start)   TRIM_PKGVAR=/vol1/@appdata/tailscale TRIM_APPDEST=/vol1/@appcenter/tailscale bash /var/apps/tailscale/cmd/main start >>"${PKG_VAR}/guard.log" 2>&1 ;;
-        ts-stop)    TRIM_PKGVAR=/vol1/@appdata/tailscale TRIM_APPDEST=/vol1/@appcenter/tailscale bash /var/apps/tailscale/cmd/main stop >>"${PKG_VAR}/guard.log" 2>&1 ;;
+        ts-start)   action_log "手动启动 Tailscale"; TRIM_PKGVAR=/vol1/@appdata/tailscale TRIM_APPDEST=/vol1/@appcenter/tailscale bash /var/apps/tailscale/cmd/main start >>"${PKG_VAR}/guard.log" 2>&1 ;;
+        ts-stop)    action_log "手动停止 Tailscale"; TRIM_PKGVAR=/vol1/@appdata/tailscale TRIM_APPDEST=/vol1/@appcenter/tailscale bash /var/apps/tailscale/cmd/main stop >>"${PKG_VAR}/guard.log" 2>&1 ;;
+        # 立即检测一次：向守护进程发 USR2，唤醒并执行一轮探测
+        probe-now)  [ -f "$GUARD_PID" ] && kill -USR2 "$(head -n1 "$GUARD_PID" | tr -d '[:space:]')" 2>/dev/null ;;
+        # 清除在线统计历史
+        clear-history) action_log "清除在线统计历史"; rm -f "${PKG_VAR}/history.log" ;;
         *) err "unknown action" ;;
     esac
     json_ok "{\"ok\":true,\"action\":\"$act\"}"
