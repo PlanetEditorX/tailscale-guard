@@ -1,5 +1,5 @@
 appname               = tailscale-guard
-version               = 1.0.5
+version               = 1.0.6
 display_name          = Tailscale 看门狗
 desc                  = 监控局域网哨兵设备在线状态，自动启停 Tailscale。设备离线时自动启动 VPN，恢复在线时自动关闭，支持网页配置哨兵、探测间隔、生效时间段及条件逻辑。
 arch                  = x86_64
@@ -9,4 +9,4 @@ maintainer_url        = https://tailscale.com/
 distributor           = custom
 desktop_uidir         = ui
 desktop_applaunchname = tailscale-guard.Application
-changelog             = v1.0.5 自动构建（2026-08-08）
+changelog             = v1.0.6 自动构建（2026-08-08）
