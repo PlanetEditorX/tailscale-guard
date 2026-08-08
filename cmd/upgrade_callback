@@ -1,5 +1,5 @@
 #!/bin/bash
-### 升级后回调 — 重启守护进程
+# 升级后回调：重启守护进程，让新版本代码生效
 PID_FILE="/vol1/@appdata/tailscale-guard/guard.pid"
 if [ -f "$PID_FILE" ]; then
     pid=$(head -n1 "$PID_FILE" 2>/dev/null | tr -d '[:space:]')

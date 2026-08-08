@@ -1,5 +1,5 @@
 #!/bin/bash
-### 配置保存后回调 — 重载守护进程以应用新配置
+# 配置保存后回调：向守护进程发送 USR1 信号，使其立即重载新配置
 PID_FILE="/vol1/@appdata/tailscale-guard/guard.pid"
 if [ -f "$PID_FILE" ]; then
     pid=$(head -n1 "$PID_FILE" 2>/dev/null | tr -d '[:space:]')

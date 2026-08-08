@@ -1,4 +1,5 @@
 #!/bin/bash
+# 卸载后回调：按向导选择决定是否删除数据目录
 DATA="$wizard_delete_data"
 case "$DATA" in
     "true")

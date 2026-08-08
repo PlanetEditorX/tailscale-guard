@@ -1,14 +1,18 @@
 #!/bin/bash
-# tailscale-guard cmd/main — 守护进程启停控制
+# =============================================================================
+# tailscale-guard cmd/main — 守护进程启停控制入口
+# 被 fnOS 应用中心、Web UI(/api/action) 调用，负责拉起/停止后台的 guard.sh
 # 用法: main {start|stop|restart|status}
+# =============================================================================
 
 PKG_NAME="tailscale-guard"
-PKG_VAR="/vol1/@appdata/${PKG_NAME}"
-APP_DEST="/vol1/@appcenter/${PKG_NAME}"
-PID_FILE="${PKG_VAR}/guard.pid"
-LOG_FILE="${PKG_VAR}/guard.log"
-GUARD_SCRIPT="${APP_DEST}/app/guard.sh"
+PKG_VAR="/vol1/@appdata/${PKG_NAME}"          # 数据目录（配置/状态/日志）
+APP_DEST="/vol1/@appcenter/${PKG_NAME}"       # 应用安装目录
+PID_FILE="${PKG_VAR}/guard.pid"               # 守护进程 PID 文件
+LOG_FILE="${PKG_VAR}/guard.log"               # 日志文件
+GUARD_SCRIPT="${APP_DEST}/app/guard.sh"       # 守护脚本本体
 
+# 导出环境变量，让守护脚本调用的 Tailscale 应用脚本定位自身目录
 export TRIM_PKGVAR="${PKG_VAR}"
 export TRIM_APPDEST="${APP_DEST}"
 export TRIM_PKGNAME="${PKG_NAME}"
@@ -16,14 +20,17 @@ export TRIM_APPNAME="${PKG_NAME}"
 
 mkdir -p "${PKG_VAR}"
 
+# 记录一条带时间戳的日志
 log_msg() { echo "$(date '+%Y-%m-%d %H:%M:%S') [main] $1" >> "${LOG_FILE}"; }
 
+# 通过 PID 文件判断守护进程是否存活（kill -0 不实际发信号，仅探测）
 is_running() {
     [ -f "${PID_FILE}" ] || return 1
     local pid; pid=$(head -n1 "${PID_FILE}" 2>/dev/null | tr -d '[:space:]')
     [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null
 }
 
+# 启动守护进程：nohup 后台运行 guard.sh，写入 PID 并确认存活
 start_guard() {
     if is_running; then log_msg "guard already running"; return 0; fi
     log_msg "starting guard daemon..."
@@ -35,6 +42,7 @@ start_guard() {
     else log_msg "guard failed to start"; rm -f "${PID_FILE}"; return 1; fi
 }
 
+# 停止守护进程：先发 TERM（优雅退出），等待最多 15 秒仍不退则 KILL
 stop_guard() {
     if ! is_running; then log_msg "guard not running"; rm -f "${PID_FILE}"; return 0; fi
     local pid; pid=$(head -n1 "${PID_FILE}" | tr -d '[:space:]')
@@ -47,6 +55,7 @@ stop_guard() {
     log_msg "guard stopped"
 }
 
+# 命令分发
 case "$1" in
     start)   start_guard; exit $? ;;
     stop)    stop_guard; exit $? ;;

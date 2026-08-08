@@ -1,0 +1,3 @@
+# 构建产物（用 build.sh 重新生成）
+*.fpk
+app.tgz

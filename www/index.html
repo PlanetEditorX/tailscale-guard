@@ -125,17 +125,25 @@ button:disabled{opacity:.5;cursor:default}
   </div>
 </div>
 <script>
+// ===== 工具函数 =====
 const base="";
+// GET 请求 JSON；失败时返回错误对象而非抛异常
 async function gj(p){try{return await(await fetch(base+p)).json();}catch(e){return{error:e.message};}}
+// POST 表单请求 JSON（用于保存配置与启停动作）
 async function pj(p,b){try{return await(await fetch(base+p,{method:"POST",headers:{'Content-Type':'application/x-www-form-urlencoded'},body:b})).json();}catch(e){return{error:e.message};}}
+// 根据守护阶段与 Tailscale 状态决定徽标颜色与文案
 function dot(phase,ts){
   if(!ts&&phase!=='idle'&&phase!=='retry'&&phase!=='active') return ['warn','未知'];
   let b='gray',t=phase||'-';
-  if(phase==='idle'||phase==='active') b='green';
-  else if(phase==='retry') b='amber';
-  else if(phase==='paused') b='amber';
+  if(phase==='idle'||phase==='active') b='green';     // 稳态：绿
+  else if(phase==='retry') b='amber';                 // 复测中：黄
+  else if(phase==='paused') b='amber';                // 时段外：黄
   return [b,t];
 }
+// 设置徽标元素的文本与样式类
+function set(id,txt,cls){const e=document.getElementById(id);e.textContent=txt;e.className='badge '+cls;}
+
+// ===== 状态面板 =====
 async function loadState(){
   const s=await gj('api/state');
   if(s.error){document.getElementById('sPhase').textContent='错误';return;}
@@ -151,26 +159,30 @@ async function loadState(){
   document.getElementById('sStopHits').textContent=(s.stop_hits??0);
   document.getElementById('sAction').textContent=s.last_action||'无';
   document.getElementById('sProvbe').textContent=s.last_probe||'-';
+  // 哨兵设备列表
   const list=document.getElementById('sList');
   if(s.sentinels&&s.sentinels.length){
     list.innerHTML=s.sentinels.map(x=>`<tr><td>${x.device}</td><td><span class="badge ${x.status==='online'?'green':'red'}">${x.status==='online'?'在线':'离线'}</span></td></tr>`).join('');
   }else{list.innerHTML='<tr><td colspan="2" class="muted">未配置哨兵</td></tr>';}
 }
-function set(id,txt,cls){const e=document.getElementById(id);e.textContent=txt;e.className='badge '+cls;}
+
+// ===== 日志面板 =====
 async function fetchLog(scroll){
   const r=await gj('api/log?lines=200');
   const e=document.getElementById('log');e.textContent=r.log||'暂无日志';
-  if(scroll)e.scrollTop=e.scrollHeight;
+  if(scroll)e.scrollTop=e.scrollHeight;   // 需要时滚动到底部
 }
+
+// ===== 配置面板 =====
 async function loadConfig(){
   const c=await gj('api/config');
   if(c.error)return;
-  // SENTINELS textarea 用换行；其它 raw 字段
+  // SENTINELS 在 textarea 中用换行分隔；其它字段原样填充
   document.getElementById('SENTINELS').value=(c.SENTINELS||'').split(',').filter(Boolean).join('\n');
   ['NORMAL_INTERVAL','RETRY_INTERVAL','START_THRESHOLD','STOP_THRESHOLD','EFFECTIVE_TIME','LAN_IFACE'].forEach(k=>{document.getElementById(k).value=c[k]||'';});
   document.getElementById('START_CONDITION').value=c.START_CONDITION||'all_offline';
   document.getElementById('STOP_CONDITION').value=c.STOP_CONDITION||'any_online';
-  // 解析 EFFECTIVE_TIME 到时间选择器
+  // 把 EFFECTIVE_TIME(HHMM-HHMM) 解析到两个 time 选择器；为空则勾选"全天"
   const eff=(c.EFFECTIVE_TIME||'').trim();
   if(!eff){ document.getElementById('EFF_ALLDAY').checked=true; }
   else{
@@ -180,12 +192,14 @@ async function loadConfig(){
     document.getElementById('EFF_END').value=(parts[1]||'23:59').replace(/(\d{2})(\d{2})/,'$1:$2');
   }
 }
+// 把时间选择器转换回配置格式；勾选"全天"时返回空串
 function effToConfig(){
   if(document.getElementById('EFF_ALLDAY').checked) return '';
   const s=document.getElementById('EFF_START').value.replace(':','');
   const e=document.getElementById('EFF_END').value.replace(':','');
   return s+'-'+e;
 }
+// 收集表单提交到 /api/config，成功后重载状态
 async function saveConfig(){
   const sent=document.getElementById('SENTINELS').value.split('\n').map(x=>x.trim()).filter(Boolean).join(',');
   const body=new URLSearchParams();
@@ -197,10 +211,13 @@ async function saveConfig(){
   if(r.ok)alert('已保存，守护进程已重载');else alert('保存失败:'+(r.error||'未知'));
   loadState();
 }
+// 手动启停动作（守护进程 / Tailscale）
 async function act(a){const r=await pj('api/action','action='+a);if(!r.ok)alert('操作失败');loadState();setTimeout(loadState,1500);}
+
+// ===== 初始化与定时刷新 =====
 loadState();loadConfig();fetchLog(true);
-setInterval(loadState,5000);
-setInterval(()=>fetchLog(true),10000);
+setInterval(loadState,5000);          // 状态每 5 秒刷新
+setInterval(()=>fetchLog(true),10000); // 日志每 10 秒刷新
 </script>
 </body>
 </html>
