@@ -319,8 +319,10 @@ function setRange(secs){
 function aggregateHistory(hist,rangeSecs){
   const cfg=RANGE_PRESETS[rangeSecs]||RANGE_PRESETS[604800];
   const bucket=cfg.bucket;
-  if(!hist.length)return [];
-  const endTs=Math.floor(Date.now()/1000);
+  if(!hist.length)return[];
+  // 时间轴终点以数据自身最新时间戳为准（NAS 时钟），
+  // 避免浏览器与 NAS 时钟不同步导致过滤错乱、切换周期无变化
+  const endTs=hist.reduce((m,p)=>Math.max(m,Number(p.t)),0);
   const startTs=endTs-rangeSecs;
   const filtered=hist.filter(p=>Number(p.t)>=startTs).sort((a,b)=>a.t-b.t);
   if(!filtered.length)return [];
@@ -413,6 +415,15 @@ function drawChart(hist){
     ctx.textAlign='center';
     ctx.fillText('暂无统计数据',W/2,H/2+6);
     return;
+  }
+
+  // 数据跨度不足所选周期时提示（避免误以为切换周期无效）
+  const spanSecs=(hist[hist.length-1].t-hist[0].t);
+  if(spanSecs < chartRange*0.9){
+    ctx.fillStyle='rgba(166,173,183,.72)';
+    ctx.font='12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(`数据跨度不足（仅约 ${Math.max(1,Math.round(spanSecs/3600))} 小时），长周期显示内容相同属正常`,W/2,P.t+ih/2+6);
   }
 
   const maxTotal=Math.max(1,...hist.map(p=>Number(p.total)||0));
