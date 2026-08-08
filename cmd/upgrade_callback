@@ -1,0 +1,9 @@
+#!/bin/bash
+### 升级后回调 — 重启守护进程
+PID_FILE="/vol1/@appdata/tailscale-guard/guard.pid"
+if [ -f "$PID_FILE" ]; then
+    pid=$(head -n1 "$PID_FILE" 2>/dev/null | tr -d '[:space:]')
+    [ -n "$pid" ] && kill -TERM "$pid" 2>/dev/null
+    sleep 2
+fi
+exit 0

@@ -1,0 +1,8 @@
+#!/bin/bash
+### 卸载前回调 — 停止守护进程与 Tailscale
+PKG_VAR="/vol1/@appdata/tailscale-guard"
+if [ -f "${PKG_VAR}/guard.pid" ]; then
+    pid=$(head -n1 "${PKG_VAR}/guard.pid" 2>/dev/null | tr -d '[:space:]')
+    [ -n "$pid" ] && kill -TERM "$pid" 2>/dev/null
+fi
+exit 0

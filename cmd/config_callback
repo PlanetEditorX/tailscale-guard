@@ -1,0 +1,8 @@
+#!/bin/bash
+### 配置保存后回调 — 重载守护进程以应用新配置
+PID_FILE="/vol1/@appdata/tailscale-guard/guard.pid"
+if [ -f "$PID_FILE" ]; then
+    pid=$(head -n1 "$PID_FILE" 2>/dev/null | tr -d '[:space:]')
+    [ -n "$pid" ] && kill -USR1 "$pid" 2>/dev/null
+fi
+exit 0

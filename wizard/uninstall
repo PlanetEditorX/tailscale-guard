@@ -1,0 +1,19 @@
+[{
+  "stepTitle": "卸载应用",
+  "items": [
+    {
+      "type": "tips",
+      "helpText": "保留或删除应用设置与哨兵配置。"
+    },
+    {
+      "type": "radio",
+      "field": "wizard_delete_data",
+      "label": "卸载时是否清除数据",
+      "initValue": "false",
+      "options": [
+        { "label": "保留现有文件", "value": "false" },
+        { "label": "清除所有数据文件（不可恢复）", "value": "true" }
+      ]
+    }
+  ]
+}]

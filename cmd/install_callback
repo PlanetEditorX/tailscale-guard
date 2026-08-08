@@ -1,0 +1,23 @@
+#!/bin/bash
+### 安装后回调 — 用向导参数生成配置并启动守护进程
+PKG_VAR="/vol1/@appdata/tailscale-guard"
+mkdir -p "${PKG_VAR}"
+
+# 向导默认值兜底
+[ -z "$wizard_sentinel" ]        && wizard_sentinel="192.168.1.30"
+[ -z "$wizard_start_condition" ] && wizard_start_condition="all_offline"
+[ -z "$wizard_stop_condition" ]  && wizard_stop_condition="any_online"
+
+cat > "${PKG_VAR}/guard.conf" <<CONF
+SENTINELS=${wizard_sentinel}
+NORMAL_INTERVAL=600
+RETRY_INTERVAL=180
+START_THRESHOLD=3
+START_CONDITION=${wizard_start_condition}
+STOP_THRESHOLD=1
+STOP_CONDITION=${wizard_stop_condition}
+EFFECTIVE_TIME=${wizard_effective_time}
+LAN_IFACE=enp6s18
+CONF
+
+exit 0

@@ -1,0 +1,11 @@
+#!/bin/bash
+DATA="$wizard_delete_data"
+case "$DATA" in
+    "true")
+        if [ -d "/vol1/@appdata/tailscale-guard" ]; then
+            rm -rf /vol1/@appdata/tailscale-guard && echo "数据已删除" || echo "删除失败"
+        fi
+        ;;
+    *) echo "保留数据文件" ;;
+esac
+exit 0

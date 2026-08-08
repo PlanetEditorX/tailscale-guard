@@ -1,0 +1,57 @@
+[
+    {
+        "stepTitle": "哨兵设备配置",
+        "items": [
+            {
+                "type": "tips",
+                "helpText": "设置用于判断你在不在家的哨兵设备（如手机）。设备离线将触发 Tailscale 启动。安装后可在应用网页内随时修改。"
+            },
+            {
+                "type": "text",
+                "field": "wizard_sentinel",
+                "label": "哨兵设备 IP 或 MAC（多个用逗号分隔）",
+                "initValue": "192.168.1.20",
+                "rules": [
+                    {
+                        "required": true,
+                        "message": "请输入至少一个哨兵设备"
+                    }
+                ]
+            },
+            {
+                "type": "text",
+                "field": "wizard_effective_time",
+                "label": "生效时段（留空=全天，例 08:00-23:00）",
+                "initValue": ""
+            },
+            {
+                "type": "select",
+                "field": "wizard_start_condition",
+                "label": "启动 Tailscale 条件",
+                "initValue": "all_offline",
+                "options": [
+                    { "label": "全部离线（所有哨兵都不在线才启动）", "value": "all_offline" },
+                    { "label": "任一离线（有一个不在线就启动）",       "value": "any_offline" },
+                    { "label": "全部在线", "value": "all_online" },
+                    { "label": "任一在线", "value": "any_online" }
+                ]
+            },
+            {
+                "type": "select",
+                "field": "wizard_stop_condition",
+                "label": "停止 Tailscale 条件",
+                "initValue": "any_online",
+                "options": [
+                    { "label": "任一在线（有一个哨兵在线就停止）", "value": "any_online" },
+                    { "label": "全部在线", "value": "all_online" },
+                    { "label": "任一离线", "value": "any_offline" },
+                    { "label": "全部离线", "value": "all_offline" }
+                ]
+            },
+            {
+                "type": "tips",
+                "helpText": "默认：正常每 10 分钟探测一次；首次离线后每 3 分钟重试，连续 3 次仍离线则启动 Tailscale；恢复在线立即停止。进阶参数可在应用网页内调整。"
+            }
+        ]
+    }
+]
