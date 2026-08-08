@@ -1,0 +1,59 @@
+name: Build Release
+
+# 触发：推送到 main 或手动触发（Actions 页 → Run workflow）
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # 需要回写 manifest 与推送 tag
+    steps:
+      - uses: actions/checkout@v4
+
+      # 版本递增：patch 位 0-9，满 10 进位 minor；minor 满 10 进位 major
+      # 例：1.0.8 -> 1.0.9 -> 1.1.0 -> ... -> 1.9.9 -> 2.0.0
+      - name: Bump version
+        id: bump
+        run: |
+          VER=$(sed -n 's/^version[[:space:]]*=[[:space:]]*//p' manifest | tr -d '[:space:]')
+          IFS=. read -r major minor patch <<< "$VER"
+          patch=$((patch+1))
+          if [ "$patch" -ge 10 ]; then patch=0; minor=$((minor+1)); fi
+          if [ "$minor" -ge 10 ]; then minor=0; major=$((major+1)); fi
+          NEW="$major.$minor.$patch"
+          echo "old_version=$VER" >> "$GITHUB_OUTPUT"
+          echo "new_version=$NEW" >> "$GITHUB_OUTPUT"
+          sed -i "s/^version[[:space:]]*=.*/version               = $NEW/" manifest
+
+      - name: Update changelog
+        run: |
+          NEW="${{ steps.bump.outputs.new_version }}"
+          DATE=$(date -u +%Y-%m-%d)
+          sed -i "s/^changelog[[:space:]]*=.*/changelog             = v$NEW 自动构建（$DATE）/" manifest
+          cat manifest
+
+      - name: Build package
+        run: bash build.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tailscale-guard-${{ steps.bump.outputs.new_version }}
+          path: tailscale-guard-${{ steps.bump.outputs.new_version }}.fpk
+
+      # 提交版本递增 + 打 tag（[skip ci] 防止触发新一轮构建）
+      - name: Commit and tag
+        env:
+          NEW: ${{ steps.bump.outputs.new_version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest
+          git commit -m "chore: 自动递增版本至 v${NEW} [skip ci]"
+          git push
+          git tag "v${NEW}"
+          git push origin "v${NEW}"

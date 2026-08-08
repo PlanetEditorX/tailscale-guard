@@ -71,6 +71,16 @@ bash build.sh        # 生成 app.tgz 与 tailscale-guard-<版本>.fpk
 
 然后在飞牛 NAS 应用中心 → 手动安装，选择生成的 `.fpk` 即可。
 
+### 自动构建（GitHub Actions）
+
+推送到 `main` 分支会自动触发 `.github/workflows/build.yml`：
+
+- 版本号自动递增（patch 位 `0-9`，满 `10` 进位：`1.0.9 → 1.1.0 → ... → 1.9.9 → 2.0.0`）
+- 更新 `manifest` 的 `version`/`changelog` 并提交、打 `v<版本>` tag
+- 构建 `.fpk` 并作为 Actions artifact 输出（可在 Actions 页面下载）
+
+也可在 Actions 页面点 **Run workflow** 手动触发。
+
 ### 方式二：手动安装脚本
 
 ```bash
