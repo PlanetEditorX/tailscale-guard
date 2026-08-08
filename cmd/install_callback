@@ -22,4 +22,13 @@ EFFECTIVE_TIME=${wizard_effective_time}
 LAN_IFACE=enp6s18
 CONF
 
+# 同步 UI 资源（图标/入口配置）到 /var/apps 注册目录，
+# 覆盖部分 fnOS 版本从该路径读取桌面图标的场景
+APP_DEST="/vol1/@appcenter/tailscale-guard"
+APP_REG="/var/apps/tailscale-guard"
+if [ -d "${APP_DEST}/ui" ]; then
+    mkdir -p "${APP_REG}/ui"
+    cp -r "${APP_DEST}/ui/." "${APP_REG}/ui/" 2>/dev/null || true
+fi
+
 exit 0

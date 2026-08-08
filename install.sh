@@ -17,7 +17,7 @@ command -v tailscaled >/dev/null 2>&1 || [ -f /var/apps/tailscale/cmd/main ] || 
   echo "未检测到 Tailscale 应用，请先在飞牛应用中心安装 Tailscale"; exit 1; }
 
 echo "[1/5] 创建目录与符号链接"
-mkdir -p $DA/cmd $DA/config $AC/app $AC/ui/images $AC/www $AD
+mkdir -p $DA/cmd $DA/config $DA/ui $AC/app $AC/ui/images $AC/www $AD
 # 让 /var/apps 下的注册目录能解析到数据/目标目录
 ln -sfn $AD $DA/var
 ln -sfn $AD $DA/etc
@@ -31,6 +31,7 @@ cp ./ICON.PNG $DA/ICON.PNG 2>/dev/null
 cp ./ICON_256.PNG $DA/ICON_256.PNG 2>/dev/null
 cp -r ./app/* $AC/app/
 cp -r ./ui/* $AC/ui/
+cp -r ./ui/* $DA/ui/ 2>/dev/null || true
 cp -r ./www/* $AC/www/
 
 echo "[3/5] 设置权限"
