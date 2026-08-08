@@ -30,6 +30,7 @@ TS_SOCK="/vol1/@appdata/tailscale/tailscaled.sock"  # tailscaled 控制 socket
 CONF="${PKG_VAR}/guard.conf"                        # 配置文件（key=value，可被 source）
 STATE="${PKG_VAR}/state.json"                       # 状态文件（供 Web UI 轮询读取）
 LOG="${PKG_VAR}/guard.log"                          # 日志文件
+HISTORY="${PKG_VAR}/history.log"                    # 历史记录（折线图数据源）
 
 # 导出环境变量：让被调用的 Tailscale 应用脚本定位到自己的数据/安装目录
 export TRIM_PKGVAR="/vol1/@appdata/tailscale"
@@ -105,17 +106,20 @@ probe_one() {
 # 探测全部哨兵，把结果汇总到全局变量：
 #   any_online        —— 是否存在任一设备在线（1/0）
 #   all_online        —— 是否全部设备在线（1/0）
+#   online_count      —— 当前在线设备数量（折线图用）
+#   total_count       —— 哨兵设备总数（折线图用）
 #   sentinel_states   —— 每台设备的 JSON 数组字符串（供状态文件使用）
 probe_all() {
-    any_online=0; all_online=1
+    any_online=0; all_online=1; online_count=0; total_count=0
     sentinel_states=""
     local IFS=','
     for d in ${SENTINELS}; do
         [ -z "$d" ] && continue
         d=$(echo "$d" | xargs)     # 去除首尾空格
         [ -z "$d" ] && continue
+        total_count=$((total_count+1))
         if probe_one "$d"; then
-            any_online=1; st="online"
+            any_online=1; online_count=$((online_count+1)); st="online"
         else
             all_online=0; st="offline"
         fi
@@ -179,6 +183,15 @@ write_state() {
 JSON
 }
 
+# 追加一条历史记录：时间戳,在线设备数,设备总数,Tailscale状态(1运行/0停止)
+# 只保留最近 720 条（默认 10 分钟间隔 ≈ 5 天）
+write_history() {
+    local ts=0
+    ts_running && ts=1
+    { tail -n 719 "${HISTORY}" 2>/dev/null; printf '%s,%s,%s,%s\n' "$(date +%s)" "${online_count:-0}" "${total_count:-0}" "$ts"; } \
+        > "${HISTORY}.tmp" && mv "${HISTORY}.tmp" "${HISTORY}"
+}
+
 # 分段睡眠：每 1 秒检查一次 RELOAD_NOW 标志，收到 USR1 信号时立即提前返回
 sleep_guard() {
     local secs="$1"
@@ -212,6 +225,7 @@ while true; do
 
     probe_all
     logmsg "探测完成: any_online=$any_online all_online=$all_online phase=$phase start_hits=$start_hits stop_hits=$stop_hits"
+    write_history
 
     # 状态机转换
     case "$phase" in

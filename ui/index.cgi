@@ -93,6 +93,14 @@ case "$REL_PATH" in
     exit 0
     ;;
 
+# 历史趋势：返回 history.log 最近 N 条，供折线图使用
+# 每行格式: 时间戳,在线设备数,设备总数,Tailscale状态(1运行/0停止)
+/api/history)
+    header "application/json; charset=utf-8"
+    { echo '{"history":['; tail -n 720 "${PKG_VAR}/history.log" 2>/dev/null | awk -F, 'NR>1{printf ","}{printf "{\"t\":%s,\"online\":%s,\"total\":%s,\"ts\":%s}", $1,$2,$3,$4}'; echo ']}'; }
+    exit 0
+    ;;
+
 # 启停动作
 /api/action)
     [ "$REQUEST_METHOD" = "POST" ] || err "method not allowed"

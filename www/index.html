@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tailscale 看门狗</title>
-<link rel="icon" type="image/png" href="favicon.png">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAIdElEQVR4nK2XXYxdVRXHf2uffc859965M0On006ZTjv9mEr5aGmNgOHBj2gkEqGNLSGmoSH4goYnFR984MEn9c0XMFGpQQEjKGogBFI+Eu0TDR9F206n7aCElrbTmc79PB97Lx/OnTt3ChqjrOQkJ2fttdfea//3/7+OUJgACjBaqYyFg4O32yCYEpG1BFIT1RIiIsU4fDfIsGxXfVNVURXN1LkGKh8q7lSzkx2Zm5v7oD+n9CUPN06M/yAw9gFjGBdZcv0n0/9yDKgqqpxzuTs0+/77PwTaQC9LeXJi/NkwjO7w3qOq2repT8qMiIgxhjRNX6m32nvm5uYaBtCN4+M/jcLojjx3aTe5AMEn/Iiqap67NArDL1Yr8WOAyrp1675cicKXANcdWBRWBC2qgTGmV8xewUXwzoFI4VddHtM9VO89Ykwxl2ovVsGJSNBOWnebkjX3ijFoN3gpeZ7nBNZSrlTwqvi+BArkeU4Ux4RhSJ7ny7EIznkUqFSrvblEpDemWL+oDUr3WhHZ0Z1bQBApJl+zZi3XX38d1pZYWFjg2LFjZFmGMQbnPNddt53168dRVWZn3+P06RmsLeGco1yusGPHTQwMDJAkCe+++zfm5y9jraU4YUQVEQluMiCjvZoC3ivlcpkbb7yBOC4DMDY2xtTUNrxX8twxPj7Oli2bERGCIGDbtilGR0e7O4Xt27czMjICQK1W44YbrsfaEsvwKnIZWG1ETLmvLDjvqVYHCMOQLMsASNOUoaFBgiDAe8/w8BDee7z3OOcQEYaGhnHOUSqF1GoDpGkKQJIkVCoVyuUyzmsPRN2csQHs0gffBdxivU673SaKIkSEKIqYu3yZ3DnEGC7NXcYYgw2CoqzeMzc3R2AtSZqysHCFOC5i4zimXm/QbLUwxqAKCoIqHgLLVUxijCFJEt459i6f2raNKAo5d+48MzOnMV1Enz9/nr8fP87E+vWoKmdn3+Py/DzWWrz3HD9xAgSGBgdZuHKFEydO4r0nCIIlDBQVEDEyuWHDvAmC4b77jwg4VwSUSiU6nQ4iQsGOhTnniOMYVSVJEoIg6PmWkkRRRJqm3eRm6aYuHTiqvtkrf7+pFuCq1+vkeU65XJyh965XJec8Fy9eQgQGBwcRMagW5BkElmazycLCFcKwwIT3HyVWBazHEABLNCEC3nmc9+zZs4fx8XGOHDnC22+/Q3WgCkCr1WFsbA0HDhwgzVKef/4FFhcXicIQBeqNBp+97VZ27/40MzOnOHz4FcIoWla8/nPfsGFyftOmzTo5uclPTm7SzZu36Jo1a/VXh36pS9Zpt/Se/ft17dox3bBho+7atVvPnpnp+d9686hu3TqlmzZt1tHRtfqtBx9U713P/5Mf/0hHRkZ1y5atOjm5qfds3DjZ6FdUjDE0m01279rFfQfvx+UJSbtBFJd5+HvfoVQq0Wg0+OYD9zO5aQtJu0HaabLz5t3cs38f8/MLDA0N8v2Hv4uIIWk3UJ/z0EPfZvPmyR6WVuRchuQygKI4Kt69R0Tw3hPHMcYYvCqVSqU7dhlw1WoF7z3WWsIoxPXFlqwlDCO8V+Qq+Tb9GuC9p1Kp8sYbR3n91cPYsEwYVzHG8PNfPE673aFaqfLr3zxFq1knrgwQlQe48OE5nnn2DwwPD3Pp0hyHDj1BYAxhXCWwIc88+3ump6cpl2Oc+t5+VUEmNkzOB8YMa3FJRETIsoxqpcqBA99gYmI9r732Oi+++BLlShkRodFocvPOm9i3bx9pmvH0008xc/oslUoZ7z1pkrJ3793ccsstTJ88yZNP/xbn3AoeAEG9b8rExOR8ECwtQIRCJXDe02g0UK/YkqU2MFAoYpctkySh3W6DCJVKhbBUKq5aly/q9TouzxFjqNVqmK4kF5qnvQXYrjj04UC6SxEGa4MYU8ir15UXKMsd5UoF9UqW5YSlsOdTr1QrVYIgwDnXBzNZMQeALfbcZyI456hWykxNTVEux1y4cJEzZ2cx3eaj3qiz7+t7OXjwIFmW8dhjP+Ollw9Tq9VwrtD+qa1bWbVqFY1Gg1OnZkjSFGOkr+noEpF2O9PeIlQJgoAdO3cwMjJClmWsXr0ar8rs7CytZpsvfP5zPProo70133brZ/jSV77K9MlTWGvZvn0bW7duJU1TVq8eIYxCjh59syC7brLubVAD6pY3X+x+aGiIoaEh2u02eZ6TZhnr1q3D2hKdJGHvnrtxzpO0GyTtOrYUcdedd9JoNonLMWvWriVJEvI8p93psGrVKgYGqnjXo2Pt7tUZVW2vPAEhSRKcc1hbCIy1lna7jXMOYwxnZ2cJAkMQBNhSiIhw+swZSrZEnuUknQRrbS82yzLSNCtIaKXwdIyqXO6CQlUpRKjRYPrUDKpQspbFxUVOnZrBqzJYq/H4oSd4/bVXsWGZwEb88bnn+NOfn2dwsEaW55w8OU2r1aJUsuR5zvT0DJ1O0mtu+8B+Wa69dsOTpSi613vnQXqa6p2jOlAljiIWF+tkeU5gDHR5QkTYffNOsjznrbffwVpLEBhQyJ0jiiJqtQFarRbtVrvggOXszhhjsjR5TkZHx/bFlYHfdbHQW8ASHrwqgTHdbkZ7PlWl1WohXR7olbDrL9o1jzGm2wusqL0TkaDZbNwnQDi2bv0zcbnyNefyDGRFlyQ9AvmoLZX047T+38QqqnlgbanTab18/oP37xKAcrl87dA1oy/EcbzTeU+3s/j4rP+7CSImMIYk6Ryfn7twR6fT+Ufv5zSO44nB4VWPlErRfhPYwatU8/82VcV7V8+S7A9XFi4+kiTJLEv9OT16QOI4vr1au+Z2a4ONYsyQiIlEMaCm/9+qF7UiS/9s4lXwqqTq8wXv3T/rzfpfO43GXyh+fAXQfwFPNlUIXtJTewAAAABJRU5ErkJggg==">
 <style>
 :root{--bg:#0f172a;--card:#1e293b;--border:#334155;--txt:#e2e8f0;--muted:#94a3b8;--acc:#38bdf8;--green:#4ade80;--red:#f87171;--amber:#fbbf24}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -56,6 +56,9 @@ button{padding:8px 16px;border-radius:8px;border:0;font-size:13px;font-weight:60
 button:disabled{opacity:.5;cursor:default}
 .hint{font-size:11px;color:var(--muted);margin-top:2px}
 .panel{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+#chart{width:100%;height:160px;display:block;background:#0b1120;border-radius:8px}
+.chart-legend{display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--muted)}
+.chart-legend .dot{margin-right:4px}
 .muted{color:var(--muted)}
 @media(max-width:520px){.grid,.row{grid-template-columns:1fr}}
 </style>
@@ -84,6 +87,15 @@ button:disabled{opacity:.5;cursor:default}
     <button class="btn-warn" onclick="act('restart')">重启守护</button>
     <button class="btn-ok" onclick="act('start')">启动守护</button>
     <button class="btn-stop" onclick="act('stop')">停止守护</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="sec-title"><h2>历史趋势</h2><button class="btn-ghost" style="font-size:12px;padding:4px 10px" onclick="loadHistory()">刷新</button></div>
+  <canvas id="chart"></canvas>
+  <div class="chart-legend">
+    <span><span class="dot on"></span> 哨兵在线数</span>
+    <span><span class="dot" style="background:#38bdf8"></span> Tailscale 运行中</span>
   </div>
 </div>
 
@@ -200,7 +212,8 @@ async function loadConfig(){
   if(c.error)return;
   // SENTINELS 在 textarea 中用换行分隔；其它字段原样填充
   document.getElementById('SENTINELS').value=(c.SENTINELS||'').split(',').filter(Boolean).join('\n');
-  ['NORMAL_INTERVAL','RETRY_INTERVAL','START_THRESHOLD','STOP_THRESHOLD','EFFECTIVE_TIME','LAN_IFACE'].forEach(k=>{document.getElementById(k).value=c[k]||'';});
+  // EFFECTIVE_TIME 无独立输入框（由下方两个 time 选择器表示），跳过
+  ['NORMAL_INTERVAL','RETRY_INTERVAL','START_THRESHOLD','STOP_THRESHOLD','LAN_IFACE'].forEach(k=>{const e=document.getElementById(k);if(e)e.value=c[k]||'';});
   document.getElementById('START_CONDITION').value=c.START_CONDITION||'all_offline';
   document.getElementById('STOP_CONDITION').value=c.STOP_CONDITION||'any_online';
   // 把 EFFECTIVE_TIME(HHMM-HHMM) 解析到两个 time 选择器；为空则勾选"全天"
@@ -235,10 +248,56 @@ async function saveConfig(){
 // 手动启停动作（守护进程 / Tailscale）
 async function act(a){const r=await pj('api/action','action='+a);if(!r.ok)alert('操作失败');loadState();setTimeout(loadState,1500);}
 
+// ===== 历史趋势折线图 =====
+// 拉取历史记录并重绘；数据来自 /api/history（时间戳,在线数,总数,Tailscale状态）
+async function loadHistory(){
+  const h=await gj('api/history');
+  const hist=h.history||[];
+  const cv=document.getElementById('chart');
+  if(!hist.length){cv.getContext('2d').clearRect(0,0,cv.width,cv.height);return;}
+  drawChart(hist);
+}
+function drawChart(hist){
+  const cv=document.getElementById('chart');
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth||600, H=160;
+  cv.width=W*dpr; cv.height=H*dpr;              // 高清屏适配
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const P={l:34,r:8,t:10,b:20};                 // 绘图区边距
+  const iw=W-P.l-P.r, ih=H-P.t-P.b;
+  const n=hist.length;
+  const maxY=Math.max(1,...hist.map(p=>p.total)); // Y 轴上限=哨兵总数
+  const x=i=>P.l+(n<=1?iw/2:i/(n-1)*iw);        // 时间轴等距
+  const y=v=>P.t+ih-(v/maxY*ih);                // 值→纵坐标
+  // 网格与 Y 刻度
+  ctx.strokeStyle='#334155'; ctx.lineWidth=1;
+  ctx.fillStyle='#94a3b8'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  for(let g=0;g<=maxY;g++){
+    ctx.beginPath();ctx.moveTo(P.l,y(g));ctx.lineTo(W-P.r,y(g));ctx.stroke();
+    ctx.textAlign='right';ctx.fillText(g,P.l-4,y(g)+3);ctx.textAlign='center';
+  }
+  // X 轴时间标签（首/中/尾三点）
+  [0,Math.floor(n/2),n-1].forEach(idx=>{
+    const d=new Date(hist[idx].t*1000);
+    const hm=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    ctx.fillText(hm,x(idx),H-6);
+  });
+  // 绘制折线
+  const line=(getV,color)=>{
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath();
+    hist.forEach((p,i)=>{const px=x(i),py=y(getV(p)); i?ctx.lineTo(px,py):ctx.moveTo(px,py);});
+    ctx.stroke();
+  };
+  line(p=>p.ts?maxY:0,'#38bdf8');   // Tailscale：顶=运行 底=停止
+  line(p=>p.online,'#4ade80');      // 哨兵在线数（0~总数）
+}
+
 // ===== 初始化与定时刷新 =====
-loadState();loadConfig();fetchLog(true);
+loadState();loadConfig();fetchLog(true);loadHistory();
 setInterval(loadState,5000);          // 状态每 5 秒刷新
 setInterval(()=>fetchLog(true),10000); // 日志每 10 秒刷新
+setInterval(loadHistory,30000);        // 趋势图每 30 秒刷新
 </script>
 </body>
 </html>
