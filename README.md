@@ -77,7 +77,7 @@ bash build.sh        # 生成 app.tgz 与 tailscale-guard-<版本>.fpk
 
 - 版本号自动递增（patch 位 `0-9`，满 `10` 进位：`1.0.9 → 1.1.0 → ... → 1.9.9 → 2.0.0`）
 - 更新 `manifest` 的 `version`/`changelog` 并提交、打 `v<版本>` tag
-- 构建 `.fpk` 并作为 Actions artifact 输出（可在 Actions 页面下载）
+- 构建 `.fpk` 并自动创建 **GitHub Release**（`.fpk` 作为资产，Release 页面可直接下载）
 
 也可在 Actions 页面点 **Run workflow** 手动触发。
 

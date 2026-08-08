@@ -39,12 +39,6 @@ jobs:
       - name: Build package
         run: bash build.sh
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tailscale-guard-${{ steps.bump.outputs.new_version }}
-          path: tailscale-guard-${{ steps.bump.outputs.new_version }}.fpk
-
       # 提交版本递增 + 打 tag（[skip ci] 防止触发新一轮构建）
       - name: Commit and tag
         env:
@@ -57,3 +51,13 @@ jobs:
           git push
           git tag "v${NEW}"
           git push origin "v${NEW}"
+
+      # 发布 GitHub Release：.fpk 作为资产，Release 页面可直接下载
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW: ${{ steps.bump.outputs.new_version }}
+        run: |
+          gh release create "v${NEW}" "tailscale-guard-${NEW}.fpk" \
+            --title "v${NEW}" \
+            --generate-notes
