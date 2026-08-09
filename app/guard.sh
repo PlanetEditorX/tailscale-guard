@@ -70,12 +70,12 @@ ts_api() {
     local action="$1" token resp
     token=$(cat "${PKG_VAR}/.fnos_token" 2>/dev/null)
     [ -z "$token" ] && return 1
+    # 应用中心启停接口实际为 POST /app-center/v1/app/{start|stop}?appName=<应用名>
+    # （旧版误用 /v1/{action}/start，接口不存在导致总回退直启、应用中心状态不同步）
     resp=$(curl -s -m 60 -X POST \
-        -H "Content-Type: application/json" \
         -H "authorization: trim ${token}" \
-        -d '{"appName":"tailscale","ignoreDependencies":true,"language":"zh-CN"}' \
-        "http://127.0.0.1:5666/app-center/v1/${action}/start" 2>/dev/null)
-    echo "$resp" | grep -q '"code":0'
+        "http://127.0.0.1:5666/app-center/v1/app/${action}?appName=tailscale" 2>/dev/null)
+    echo "$resp" | grep -qE '"code"[[:space:]]*:[[:space:]]*0([,}]|$)'
 }
 ts_running() { bash "${TS_MAIN}" status >/dev/null 2>&1; }          # 是否运行中
 ts_start()  {

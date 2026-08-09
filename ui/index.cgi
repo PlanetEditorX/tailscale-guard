@@ -46,10 +46,8 @@ ts_control() {
         printf '%s' "$token" > "${PKG_VAR}/.fnos_token"
         resp=$(curl -s -m 30 -X POST \
             -H "authorization: trim ${token}" \
-            -H 'Content-Type: application/json' \
-            -d "{\"appName\":\"tailscale\",\"ignoreDependencies\":true,\"language\":\"zh-CN\"}" \
-            "http://127.0.0.1:5666/app-center/v1/${op}/start" 2>/dev/null)
-        if echo "$resp" | grep -q '"code":0'; then
+            "http://127.0.0.1:5666/app-center/v1/app/${op}?appName=tailscale" 2>/dev/null)
+        if echo "$resp" | grep -qE '"code"[[:space:]]*:[[:space:]]*0([,}]|$)'; then
             action_log "应用中心 API 执行 ${op} 成功"
             return 0
         fi
@@ -142,9 +140,21 @@ case "$REL_PATH" in
     if [ -z "$token" ]; then
         json_ok '{"synced":false,"reason":"no-token"}'
     fi
-    app_status=$(curl -s -m 10 -H "authorization: trim $token" \
-        "http://127.0.0.1:5666/app-center/v1/app/detail?appName=tailscale" 2>/dev/null \
-        | sed -n 's/.*"status":"\([^"]*\)".*/\1/p' | head -1)
+    list_json=$(curl -s -m 10 -H "authorization: trim $token" \
+        "http://127.0.0.1:5666/app-center/v1/app/list?language=zh-CN" 2>/dev/null | tr -d '\n')
+    # 提取 tailscale 应用对象内的 status（容忍 key 顺序/空格/嵌套对象，多级兜底）
+    app_status=""
+    if printf '%s' "$list_json" | grep -qE '"tailscale"'; then
+        app_status=$(printf '%s' "$list_json" | grep -oE '"app(Name|_name)"[[:space:]]*:[[:space:]]*"tailscale"[^}]*' \
+            | grep -oE '"status"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 \
+            | sed -E 's/.*"status"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+        [ -z "$app_status" ] && app_status=$(printf '%s' "$list_json" | grep -oE '[^}]*"app(Name|_name)"[[:space:]]*:[[:space:]]*"tailscale"' \
+            | grep -oE '"status"[[:space:]]*:[[:space:]]*"[^"]*"' | tail -1 \
+            | sed -E 's/.*"status"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+        [ -z "$app_status" ] && app_status=$(printf '%s' "$list_json" | grep -oE '"tailscale".{0,200}' \
+            | grep -oE '"status"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 \
+            | sed -E 's/.*"status"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+    fi
     if TRIM_PKGVAR=/vol1/@appdata/tailscale TRIM_APPDEST=/vol1/@appcenter/tailscale \
         bash /var/apps/tailscale/cmd/main status >/dev/null 2>&1; then
         proc_status="running"
@@ -152,14 +162,12 @@ case "$REL_PATH" in
         proc_status="stopped"
     fi
     if [ "$app_status" = "running" ] && [ "$proc_status" = "stopped" ]; then
-        curl -s -m 30 -X POST -H "authorization: trim $token" -H 'Content-Type: application/json' \
-            -d '{"appName":"tailscale","ignoreDependencies":true,"language":"zh-CN"}' \
-            "http://127.0.0.1:5666/app-center/v1/stop/start" >/dev/null 2>&1
+        curl -s -m 30 -X POST -H "authorization: trim $token" \
+            "http://127.0.0.1:5666/app-center/v1/app/stop?appName=tailscale" >/dev/null 2>&1
         action_log "状态校正：应用中心显示运行但进程未运行，执行停止"
     elif [ "$app_status" = "stopped" ] && [ "$proc_status" = "running" ]; then
-        curl -s -m 30 -X POST -H "authorization: trim $token" -H 'Content-Type: application/json' \
-            -d '{"appName":"tailscale","ignoreDependencies":true,"language":"zh-CN"}' \
-            "http://127.0.0.1:5666/app-center/v1/start/start" >/dev/null 2>&1
+        curl -s -m 30 -X POST -H "authorization: trim $token" \
+            "http://127.0.0.1:5666/app-center/v1/app/start?appName=tailscale" >/dev/null 2>&1
         action_log "状态校正：应用中心显示未运行但进程在运行，执行启动"
     fi
     json_ok "{\"synced\":true,\"app\":\"${app_status:-unknown}\",\"process\":\"$proc_status\"}"
