@@ -33,25 +33,18 @@ err()     { header "application/json; charset=utf-8"; printf '{"error":"%s"}' "$
 # 手动动作记录（写入 guard.log 供用户追踪）
 action_log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [action] $1" >> "${PKG_VAR}/guard.log"; }
 
-# ---- 通过 fnOS 应用中心 API 启停 Tailscale ----
-# 应用中心的状态只认它自己的 API 操作，直接启动进程会导致状态不同步，
-# 因此这里调用应用中心接口；token 取自浏览器 cookie(fnos-token)并持久化，
-# 供后台守护进程复用。API 失败时回退为直接操作进程（功能保底）。
+# ---- 通过 fnOS 官方 appcenter-cli 启停 Tailscale ----
+# 应用中心的状态只认它自己的操作流程，直接启动进程会导致状态不同步，
+# 因此这里调用服务端 appcenter-cli（无需浏览器 token）；失败时回退直接操作进程。
 #   $1 = start|stop
 ts_control() {
-    local op="$1" token resp
-    token=$(echo "${HTTP_COOKIE:-}" | tr ';' '\n' | sed -n 's/^ *fnos-token=//p')
-    if [ -n "$token" ]; then
-        # 持久化 token：守护进程自动启停时复用
-        printf '%s' "$token" > "${PKG_VAR}/.fnos_token"
-        resp=$(curl -s -m 30 -X POST \
-            -H "authorization: trim ${token}" \
-            "http://127.0.0.1:5666/app-center/v1/app/${op}?appName=tailscale" 2>/dev/null)
-        if echo "$resp" | grep -qE '"code"[[:space:]]*:[[:space:]]*0([,}]|$)'; then
-            action_log "应用中心 API 执行 ${op} 成功"
+    local op="$1"
+    if command -v appcenter-cli >/dev/null 2>&1; then
+        if appcenter-cli "$op" tailscale >>"${PKG_VAR}/guard.log" 2>&1; then
+            action_log "appcenter-cli 执行 ${op} 成功"
             return 0
         fi
-        action_log "应用中心 API 执行 ${op} 失败，回退直接操作进程"
+        action_log "appcenter-cli 执行 ${op} 失败，回退直接操作进程"
     fi
     TRIM_PKGVAR=/vol1/@appdata/tailscale TRIM_APPDEST=/vol1/@appcenter/tailscale \
         bash /var/apps/tailscale/cmd/main "$op" >>"${PKG_VAR}/guard.log" 2>&1
@@ -127,34 +120,11 @@ case "$REL_PATH" in
     exit 0
     ;;
 
-# 状态同步：打开页面时调用，用页面 cookie 的 token 校正应用中心状态。
-# 应用中心状态与真实进程可能不一致（如 guard 无 token 时回退直接启停进程），
-# 这里以进程状态为准，通过应用中心 API 校正，并刷新持久化 token。
+# 状态同步：打开页面时调用，以进程状态为准校正应用中心显示状态。
+# 应用中心状态与真实进程可能不一致（如早期版本直启进程），
+# 这里通过官方 appcenter-cli 校正，使两处保持一致。
 /api/sync)
-    token=$(echo "${HTTP_COOKIE:-}" | tr ';' '\n' | sed -n 's/^ *fnos-token=//p')
-    if [ -n "$token" ]; then
-        printf '%s' "$token" > "${PKG_VAR}/.fnos_token"   # 刷新持久化 token
-    else
-        token=$(cat "${PKG_VAR}/.fnos_token" 2>/dev/null)
-    fi
-    if [ -z "$token" ]; then
-        json_ok '{"synced":false,"reason":"no-token"}'
-    fi
-    list_json=$(curl -s -m 10 -H "authorization: trim $token" \
-        "http://127.0.0.1:5666/app-center/v1/app/list?language=zh-CN" 2>/dev/null | tr -d '\n')
-    # 提取 tailscale 应用对象内的 status（容忍 key 顺序/空格/嵌套对象，多级兜底）
-    app_status=""
-    if printf '%s' "$list_json" | grep -qE '"tailscale"'; then
-        app_status=$(printf '%s' "$list_json" | grep -oE '"app(Name|_name)"[[:space:]]*:[[:space:]]*"tailscale"[^}]*' \
-            | grep -oE '"status"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 \
-            | sed -E 's/.*"status"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
-        [ -z "$app_status" ] && app_status=$(printf '%s' "$list_json" | grep -oE '[^}]*"app(Name|_name)"[[:space:]]*:[[:space:]]*"tailscale"' \
-            | grep -oE '"status"[[:space:]]*:[[:space:]]*"[^"]*"' | tail -1 \
-            | sed -E 's/.*"status"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
-        [ -z "$app_status" ] && app_status=$(printf '%s' "$list_json" | grep -oE '"tailscale".{0,200}' \
-            | grep -oE '"status"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 \
-            | sed -E 's/.*"status"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
-    fi
+    app_status=$(appcenter-cli status tailscale 2>/dev/null)
     if TRIM_PKGVAR=/vol1/@appdata/tailscale TRIM_APPDEST=/vol1/@appcenter/tailscale \
         bash /var/apps/tailscale/cmd/main status >/dev/null 2>&1; then
         proc_status="running"
@@ -162,12 +132,10 @@ case "$REL_PATH" in
         proc_status="stopped"
     fi
     if [ "$app_status" = "running" ] && [ "$proc_status" = "stopped" ]; then
-        curl -s -m 30 -X POST -H "authorization: trim $token" \
-            "http://127.0.0.1:5666/app-center/v1/app/stop?appName=tailscale" >/dev/null 2>&1
+        appcenter-cli stop tailscale >>"${PKG_VAR}/guard.log" 2>&1
         action_log "状态校正：应用中心显示运行但进程未运行，执行停止"
-    elif [ "$app_status" = "stopped" ] && [ "$proc_status" = "running" ]; then
-        curl -s -m 30 -X POST -H "authorization: trim $token" \
-            "http://127.0.0.1:5666/app-center/v1/app/start?appName=tailscale" >/dev/null 2>&1
+    elif [ -n "$app_status" ] && [ "$app_status" != "running" ] && [ "$proc_status" = "running" ]; then
+        appcenter-cli start tailscale >>"${PKG_VAR}/guard.log" 2>&1
         action_log "状态校正：应用中心显示未运行但进程在运行，执行启动"
     fi
     json_ok "{\"synced\":true,\"app\":\"${app_status:-unknown}\",\"process\":\"$proc_status\"}"

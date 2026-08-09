@@ -63,19 +63,13 @@ load_conf() {
 }
 
 # ---- Tailscale 控制 ----
-# 通过 fnOS 应用中心 API 启停（保证应用中心状态同步）：
-#   token 由 Web 页面请求时持久化到 .fnos_token；无有效 token 时回退直接操作进程。
+# 通过 fnOS 官方 appcenter-cli 启停（服务端接口，同步应用中心状态，无需浏览器 token）
+# appcenter-cli 不存在或失败时回退直接操作进程。
 #   $1 = start|stop
 ts_api() {
-    local action="$1" token resp
-    token=$(cat "${PKG_VAR}/.fnos_token" 2>/dev/null)
-    [ -z "$token" ] && return 1
-    # 应用中心启停接口实际为 POST /app-center/v1/app/{start|stop}?appName=<应用名>
-    # （旧版误用 /v1/{action}/start，接口不存在导致总回退直启、应用中心状态不同步）
-    resp=$(curl -s -m 60 -X POST \
-        -H "authorization: trim ${token}" \
-        "http://127.0.0.1:5666/app-center/v1/app/${action}?appName=tailscale" 2>/dev/null)
-    echo "$resp" | grep -qE '"code"[[:space:]]*:[[:space:]]*0([,}]|$)'
+    local action="$1"
+    command -v appcenter-cli >/dev/null 2>&1 || return 1
+    appcenter-cli "$action" tailscale >>"${LOG}" 2>&1
 }
 ts_running() { bash "${TS_MAIN}" status >/dev/null 2>&1; }          # 是否运行中
 ts_start()  {
